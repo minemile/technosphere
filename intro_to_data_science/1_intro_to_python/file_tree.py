@@ -7,7 +7,7 @@ def file_tree(path, file_filter=None):
     if path.endswith(os.sep):
         path = path[:-1]
     if os.path.isfile(path):
-        print(path)
+        print(os.path.basename(path))
     for root, _, files in os.walk(path):
         level = root[len(path):].count(os.sep)
         intent = basic_intent * level

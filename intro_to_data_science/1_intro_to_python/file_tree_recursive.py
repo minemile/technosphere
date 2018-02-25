@@ -18,7 +18,7 @@ def file_tree_recursive(path, level, file_filter=None):
 
 def file_tree(path, file_filter=None):
     if os.path.isfile(path):
-        print(path)
+        print(os.path.basename(path))
         return
     file_tree_recursive(path, 0, file_filter)
 
