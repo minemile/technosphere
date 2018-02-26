@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.spatial import distance
 
 def first(size):
     """Создать "шахматную доску" на numpy"""
@@ -32,8 +31,11 @@ def fifth(size):
 def sixth(size):
     """Косинусное расстояние между вектором и всеми строчками матрицы"""
     vector = np.random.randint(1, 100, size)
-    matrix = np.random.randint(1, 100, (size+1, size))
-    return distance.cdist(matrix, vector.reshape(1, size), 'cosine')
+    matrix = np.random.randint(1, 100, (size + 1, size))
+    cosine_similarity = np.dot(
+        matrix, vector) / (np.linalg.norm(matrix, axis=1) * np.linalg.norm(vector)).transpose()
+    return (1 - cosine_similarity).reshape(-1, 1)
+
 
 if __name__ == "__main__":
     first(5)
