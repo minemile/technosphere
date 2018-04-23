@@ -2,6 +2,7 @@ from numba import jit
 import numpy as np
 from math import sqrt
 
+
 @jit(nopython=True)
 def matrix_multiply(X, Y):
     """ Matrix multiplication
@@ -12,7 +13,7 @@ def matrix_multiply(X, Y):
       - out: A numpy array of shape (N, K)
     """
     N, M = X.shape
-    K, P = Y.shape
+    P = Y.shape[1]
     out = np.zeros((N, P))
     for i in range(N):
         for j in range(P):
@@ -47,6 +48,7 @@ def matrix_rowmean(X, weights=np.empty(0)):
         out[i] = np.divide(row_sum, denominator)
     return out
 
+
 @jit(nopython=True)
 def matrix_rowstd(X):
     N, M = X.shape
@@ -56,8 +58,9 @@ def matrix_rowstd(X):
         var_sum = 0
         for j in range(M):
             var_sum += (X[i, j] - mean[i]) ** 2
-        out[i] = sqrt(var_sum / M)
+        out[i] = sqrt(var_sum / (M))
     return out
+
 
 @jit(nopython=True)
 def matrix_l2_norm(X):
@@ -66,9 +69,10 @@ def matrix_l2_norm(X):
     for i in range(N):
         row_sum = 0
         for j in range(M):
-            row_sum += X[i,j] ** 2
+            row_sum += X[i, j] ** 2
         out[i] = sqrt(row_sum)
-    return out
+    return out.reshape(N, -1)
+
 
 @jit(nopython=True)
 def matrix_bdiv(X, Y):
@@ -76,18 +80,31 @@ def matrix_bdiv(X, Y):
     out = np.zeros((N, M))
     for i in range(N):
         for j in range(M):
-            out[i, j] = X[i, j] / Y[i]
+            out[i, j] = X[i, j] / Y[i, j]
     return out
+
+
+@jit(nopython=True)
+def matrix_b_multiply(X, Y):
+    N = X.shape[0]
+    K = Y.shape[1]
+    out = np.zeros((N, K))
+    for i in range(N):
+        for j in range(K):
+            out[i, j] = X[i, 0] * Y[0, j]
+    return out
+
 
 @jit(nopython=False)
 def row_argsort(row):
     # it is allowed @ slack
     return np.argsort(row)
 
+
 @jit(nopython=True)
 def matrix_argsort(X):
     N, M = X.shape
-    out = np.zeros((N, M))
+    out = np.zeros((N, M), dtype=np.int64)
     for i in range(N):
         sorted_row = row_argsort(X[i])
         for j in range(M):
@@ -135,6 +152,6 @@ def cosine_similarity(X, top_n=10, with_mean=True, with_std=True):
         sorted_indexes = matrix_argsort(X)
         for i in range(N):
             for j in range(M - top_n):
-                X[i, int(sorted_indexes[i, j])] = 0
-    out = matrix_bdiv(matrix_multiply(X, X.T), matrix_l2_norm(X))
-    return matrix_bdiv(out, matrix_l2_norm(X))
+                X[i, sorted_indexes[i, j]] = 0
+    l2_norm_matrix = matrix_b_multiply(matrix_l2_norm(X), matrix_l2_norm(X).T)
+    return matrix_bdiv(matrix_multiply(X, X.T), l2_norm_matrix)

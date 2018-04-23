@@ -1,2 +1,6 @@
 .ipynb_checkpoints
 .DS_Store
+logs
+__pycache__
+jobs
+build

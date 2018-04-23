@@ -1,9 +1,7 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-
-from libc.math cimport sqrt
-from libc.math cimport pow
+from math import sqrt, pow
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -49,8 +47,8 @@ cpdef matrix_rowmean(np.ndarray[np.float_t, ndim=2] X,
     """
     cdef int N = X.shape[0];
     cdef int M = X.shape[1];
-    cdef float denominator = 0.0;
-    cdef float row_sum = 0.0;
+    cdef np.float64_t denominator = 0.0;
+    cdef np.float64_t row_sum = 0.0;
     cdef Py_ssize_t i = 0;
     cdef Py_ssize_t j = 0;
     cdef np.ndarray[np.float64_t, ndim=1] out
@@ -63,7 +61,7 @@ cpdef matrix_rowmean(np.ndarray[np.float_t, ndim=2] X,
         row_sum = 0.0
         for j in range(M):
             row_sum += X[i, j] * weights[j]
-        out[i] = np.divide(row_sum, denominator)
+        out[i] = row_sum / denominator
     return out
 
 @cython.boundscheck(False)
@@ -73,7 +71,7 @@ cpdef matrix_rowstd(np.ndarray[np.float64_t, ndim=2]X):
     cdef int M = X.shape[1];
     cdef Py_ssize_t i = 0;
     cdef Py_ssize_t j = 0;
-    cdef float var_sum = 0.0;
+    cdef np.float64_t var_sum = 0.0;
     cdef np.ndarray[np.float64_t, ndim=1] out
     cdef np.ndarray[np.float64_t, ndim=1] mean
     mean = matrix_rowmean(X, np.empty(0))
@@ -90,22 +88,22 @@ cpdef matrix_rowstd(np.ndarray[np.float64_t, ndim=2]X):
 cpdef matrix_l2_norm(np.ndarray[np.float64_t, ndim=2]X):
     cdef int N = X.shape[0];
     cdef int M = X.shape[1];
-    cdef float row_sum = 0.0;
+    cdef np.float64_t row_sum = 0.0;
     cdef Py_ssize_t i = 0;
     cdef Py_ssize_t j = 0;
-    cdef np.ndarray[np.float64_t, ndim=1] out
-    out = np.zeros(N)
+    cdef np.ndarray[np.float64_t, ndim=2] out
+    out = np.zeros((N, 1))
     for i in range(N):
         row_sum = 0.0
         for j in range(M):
             row_sum += pow(X[i, j], 2)
-        out[i] = sqrt(row_sum)
+        out[i, 0] = sqrt(row_sum)
     return out
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef matrix_bdiv(np.ndarray[np.float64_t, ndim=2]X,
-                  np.ndarray[np.float64_t, ndim=1]Y):
+                  np.ndarray[np.float64_t, ndim=2]Y):
     cdef Py_ssize_t i = 0;
     cdef Py_ssize_t j = 0;
     cdef int N = X.shape[0];
@@ -114,7 +112,7 @@ cpdef matrix_bdiv(np.ndarray[np.float64_t, ndim=2]X,
     out = np.zeros((N, M))
     for i in range(N):
         for j in range(M):
-            out[i, j] = X[i, j] / Y[i]
+            out[i, j] = X[i, j] / Y[i, j]
     return out
 
 cpdef row_argsort(np.ndarray[np.float64_t, ndim=1]row):
@@ -133,7 +131,20 @@ cpdef matrix_argsort(np.ndarray[np.float64_t, ndim=2]X):
     for i in range(N):
         sorted_row = row_argsort(X[i])
         for j in range(M):
-            out[i, j] = np.int(sorted_row[j])
+            out[i, j] = sorted_row[j]
+    return out
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef matrix_b_multiply(np.ndarray[np.float64_t, ndim=2]X,
+                        np.ndarray[np.float64_t, ndim=2]Y):
+    cdef int N = X.shape[0];
+    cdef int K = Y.shape[1];
+    cdef np.ndarray[np.float64_t, ndim=2] out
+    out = np.zeros((N, K))
+    for i in range(N):
+        for j in range(K):
+            out[i, j] = X[i, 0] * Y[0, j]
     return out
 
 @cython.boundscheck(False)
@@ -173,7 +184,6 @@ cpdef cosine_similarity(np.ndarray[np.float64_t, ndim=2]X,
     cdef np.ndarray[np.float64_t, ndim=1] mean
     cdef np.ndarray[np.float64_t, ndim=1] std
     cdef np.ndarray[np.float64_t, ndim=2] sorted_indexes
-    with_std=False
     if with_mean:
         mean = matrix_rowmean(X, np.empty(0))
         for i in range(N):
@@ -188,6 +198,6 @@ cpdef cosine_similarity(np.ndarray[np.float64_t, ndim=2]X,
         sorted_indexes = matrix_argsort(X)
         for i in range(N):
             for j in range(M - top_n):
-                X[int(i), int(sorted_indexes[i, j])] = 0
-    out = matrix_bdiv(matrix_multiply(X, X.T), matrix_l2_norm(X))
-    return matrix_bdiv(out, matrix_l2_norm(X))
+                X[i, int(sorted_indexes[i, j])] = 0
+    out = matrix_b_multiply(matrix_l2_norm(X), matrix_l2_norm(X).T)
+    return matrix_bdiv(matrix_multiply(X, X.T), out)
