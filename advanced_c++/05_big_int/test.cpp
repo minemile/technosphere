@@ -2,7 +2,7 @@
 #include <limits>
 #include <sstream>
 
-#include "bigint.h"
+#include "bigint.hpp"
 
 std::string toString(const BigInt& value)
 {
@@ -79,7 +79,6 @@ int main()
     checkTrue(BigInt(50) < x);
     checkTrue(BigInt(-500) < x);
     checkTrue(BigInt(-500) < BigInt(-200));
-
     checkTrue(!(x > x));
     checkTrue(BigInt(200) > x);
     checkTrue(x > BigInt(50));
